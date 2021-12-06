@@ -3,10 +3,7 @@ pub struct Instance {
     pub(crate) rotation: cgmath::Quaternion<f32>,
 }
 
-pub const NUM_INSTANCES_PER_ROW: u32 = 10;
-pub const NUM_INSTANCES: u32 = NUM_INSTANCES_PER_ROW * NUM_INSTANCES_PER_ROW;
-pub const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * 0.5, 0.0, NUM_INSTANCES_PER_ROW as f32 * 0.5);
-
+pub const MAX_INSTANCES: usize = 1000;
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
