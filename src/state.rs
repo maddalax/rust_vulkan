@@ -263,7 +263,7 @@ impl State {
 
         let camera_controller = camera_controller::CameraController::new(1.0);
 
-        let instance_data = [0; mem::size_of::<InstanceRaw>() * MAX_INSTANCES];
+        let instance_data = vec![0; mem::size_of::<InstanceRaw>() * MAX_INSTANCES];
 
         let instance_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
@@ -315,12 +315,12 @@ impl State {
     pub(crate) fn update(&mut self) {
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera.uniform]));
 
-        for (i, instance) in self.instances.iter_mut().enumerate() {
-            let amount = cgmath::Quaternion::from_angle_y(cgmath::Rad(ROTATION_SPEED));
-            let current = instance.rotation;
-            instance.rotation = quat_mul(amount, current);
-            self.instance_updates.push_back(i);
-        }
+        // for (i, instance) in self.instances.iter_mut().enumerate() {
+        //     let amount = cgmath::Quaternion::from_angle_y(cgmath::Rad(ROTATION_SPEED));
+        //     let current = instance.rotation;
+        //     instance.rotation = quat_mul(amount, current);
+        //     self.instance_updates.push_back(i);
+        // }
 
         let mut update = self.instance_updates.pop_back();
 

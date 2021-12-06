@@ -21,16 +21,21 @@ impl UpdateObserver for TestListener {
 
             let mut rng = rand::thread_rng();
 
-            state.instances.push(Instance {
-                position: Vector3 {
-                    x: (rng.gen_range(0.0..25.0)),
-                    y: (rng.gen_range(0.0..25.0)),
-                    z: (rng.gen_range(0.0..25.0)),
-                },
-                rotation: Quaternion::from_angle_y(cgmath::Deg(2.0)),
-            });
+            let len = state.instances.len();
 
-            state.instance_updates.push_back(state.instances.len() - 1);
+            for i in 0..1000 {
+                state.instances.push(Instance {
+                    position: Vector3 {
+                        x: (rng.gen_range(0.0..250.0)),
+                        y: (rng.gen_range(0.0..250.0)),
+                        z: (rng.gen_range(0.0..250.0)),
+                    },
+                    rotation: Quaternion::from_angle_y(cgmath::Deg(2.0)),
+                });
+                state.instance_updates.push_back(state.instances.len() - 1);
+            }
+
+            println!("Instances {}", state.instances.len());
         }
 
         if state.key_state.is_pressed(&VirtualKeyCode::X) {

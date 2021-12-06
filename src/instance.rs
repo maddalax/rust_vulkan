@@ -3,7 +3,7 @@ pub struct Instance {
     pub(crate) rotation: cgmath::Quaternion<f32>,
 }
 
-pub const MAX_INSTANCES: usize = 1000;
+pub const MAX_INSTANCES: usize = 1000000;
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
