@@ -1,11 +1,22 @@
-#[derive(Clone)]
+use std::cmp::Ordering;
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum InstanceType {
+    Empty,
+    Cube,
+    Triangle,
+}
+
 pub struct Instance {
-    pub(crate) instance_type: String,
+    pub(crate) instance_type: InstanceType,
     pub(crate) position: cgmath::Vector3<f32>,
     pub(crate) rotation: cgmath::Quaternion<f32>,
+    pub(crate) start_offset: usize,
+    pub(crate) array_index: usize,
 }
 
 pub const MAX_INSTANCES: usize = 1000000;
+pub const INSTANCES_PER_CHUNK: usize = 10000;
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]

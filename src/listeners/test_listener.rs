@@ -6,6 +6,7 @@ use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{Instance, MAX_INSTANCES, State};
 use crate::event::{EngineChange, InputObserver, UpdateObserver};
+use crate::instance::InstanceType;
 
 pub struct TestListener {}
 
@@ -15,17 +16,7 @@ impl InputObserver for TestListener {
 
 impl UpdateObserver for TestListener {
     fn on_update(&mut self, state: &mut State) {
-        if state.key_state.is_pressed(&VirtualKeyCode::Z) {
-            state.instance_handler.add(Instance {
-                instance_type: String::from("cube"),
-                position: Vector3 {
-                    x: (0.0),
-                    y: (0.0),
-                    z: (0.0),
-                },
-                rotation: Quaternion::from_angle_y(cgmath::Deg(2.0)),
-            })
-        }
+
 
         // if state.key_state.is_pressed(&VirtualKeyCode::Z) {
         //     // if state.instances.len() == MAX_INSTANCES as usize {

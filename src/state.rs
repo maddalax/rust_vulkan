@@ -1,5 +1,5 @@
 use std::{iter, mem};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 use std::ops::{Index, IndexMut};
 use std::sync::{Arc, Mutex};
 
@@ -17,7 +17,7 @@ use winit::{
 use crate::{camera, camera_controller, instance, structs};
 use crate::data::{CUBE, CUBE_INDICES, TRIANGLE, TRIANGLE_INDICES};
 use crate::event::{EngineChange, EngineEvent, EventSystem};
-use crate::instance::{Instance, InstanceRaw, MAX_INSTANCES};
+use crate::instance::{Instance, InstanceRaw, INSTANCES_PER_CHUNK, InstanceType, MAX_INSTANCES};
 use crate::structs::Vertex;
 
 pub struct KeyState {
@@ -45,25 +45,71 @@ impl KeyState {
 
 
 pub struct InstanceHandler {
-    instances: HashMap<String, Vec<instance::Instance>>,
-    instance_lengths: Vec<usize>,
+    pub(crate) instances: Vec<instance::Instance>,
+    pub(crate) instance_changes: Vec<usize>,
 }
 
 impl InstanceHandler {
     fn new() -> InstanceHandler {
+        let mut instances = Vec::with_capacity(MAX_INSTANCES);
+        for i in 0..instances.capacity() {
+            instances.push(Instance {
+                instance_type: InstanceType::Empty,
+                position: Vector3 {
+                    x: (0.0),
+                    y: (0.0),
+                    z: (0.0),
+                },
+                rotation: Quaternion::from_angle_y(cgmath::Deg(2.0)),
+                start_offset: 0,
+                array_index: 0,
+            });
+        }
+
         InstanceHandler {
-            instances: HashMap::new(),
-            instance_lengths: Vec::new(),
+            instances,
+            instance_changes: Vec::new(),
         }
     }
 
-    pub fn add(&mut self, instance: instance::Instance) {
-        let clone = instance.clone();
-        let instances = self.instances.get(&clone.instance_type);
-        if instances.is_none() {
-            self.instances.insert(instance.instance_type.clone(), vec![clone]);
-        } else {
-            self.instances.get_mut(&clone.instance_type.clone()).unwrap().push(clone);
+    pub fn add(&mut self, mut instance: instance::Instance) {
+        let offsets = self.find_offset(instance.instance_type.clone());
+        instance.array_index = offsets.0;
+        instance.start_offset = offsets.1;
+
+        let mut o = instance.start_offset;
+        if o == 0 {
+            o = 1
+        }
+
+        if instance.array_index > INSTANCES_PER_CHUNK * o {
+            return;
+        }
+
+        std::mem::replace(&mut self.instances[instance.array_index], instance);
+        self.instance_changes.push(offsets.0);
+    }
+
+    fn find_offset(&self, instance_type: InstanceType) -> (usize, usize) {
+        if self.instances.len() == 0 {
+            return (0, 0);
+        }
+        let mut offset = 0;
+        loop {
+            if self.instances.len() < offset + 1 {
+                return (offset, offset);
+            }
+            if self.instances[offset].instance_type as i32 == instance_type as i32 || self.instances[offset].instance_type == InstanceType::Empty {
+                let mut array_index = offset;
+                loop {
+                    let at_index = self.instances.get(array_index);
+                    if at_index.is_none() || at_index.unwrap().instance_type == InstanceType::Empty {
+                        return (array_index, offset);
+                    }
+                    array_index += 1;
+                }
+            }
+            offset += INSTANCES_PER_CHUNK;
         }
     }
 }
@@ -328,12 +374,16 @@ impl State {
         self.queue.write_buffer(&self.index_buffer, 0, bytemuck::cast_slice(CUBE_INDICES));
         self.queue.write_buffer(&self.index_buffer, (CUBE_INDICES.len() * mem::size_of::<u16>()) as BufferAddress, bytemuck::cast_slice(TRIANGLE_INDICES));
 
-        // let mut update = self.instance_updates.pop_back();
-        //
+        while let Some(index) = self.instance_handler.instance_changes.pop() {
+            let instance = self.instance_handler.instances.get(index).unwrap();
+            let raw = instance.to_raw();
+            //             self.queue.write_buffer(&self.instance_buffer, (mem::size_of::<InstanceRaw>() * offset as usize) as BufferAddress, bytemuck::cast_slice(&[raw]));
+            self.queue.write_buffer(&self.instance_buffer, (index * mem::size_of::<InstanceRaw>()) as BufferAddress, bytemuck::cast_slice(&[raw]));
+        }
+
         // while !update.is_none() {
         //     let index = update.unwrap();
         //     let raw = self.instance_handler.instances[index].to_raw();
-        //     self.queue.write_buffer(&self.instance_buffer, (mem::size_of::<InstanceRaw>() * index) as BufferAddress, bytemuck::cast_slice(&[raw]));
         //     update = self.instance_updates.pop_back();
         // }
     }
@@ -386,8 +436,24 @@ impl State {
             //     render_pass.draw_indexed(cube_indices..cube_indices + triangle_indices, (CUBE.len() as i32) - 1, 0..1); // 3.
             // }
 
-            // render_pass.draw_indexed(0..cube_indices, 0, 0..self.instances.len() as _); // 3.
-            // render_pass.draw_indexed(cube_indices..cube_indices + triangle_indices, (CUBE.len() as i32) - 1, 10..11); // 3.
+            for i in 0..MAX_INSTANCES {
+                if i % INSTANCES_PER_CHUNK == 0 {
+                    let instance = self.instance_handler.instances.get(i);
+                    if instance.is_some() {
+                        let unwrapped = instance.unwrap();
+
+                        if unwrapped.instance_type == InstanceType::Empty {
+                            break;
+                        }
+
+                        if unwrapped.instance_type == InstanceType::Cube {
+                            render_pass.draw_indexed(0..cube_indices, 0, unwrapped.start_offset as u32..(unwrapped.start_offset + INSTANCES_PER_CHUNK) as u32); // 3.
+                        } else {
+                            render_pass.draw_indexed(cube_indices..cube_indices + triangle_indices, (CUBE.len() as i32) - 1, unwrapped.start_offset as u32..(unwrapped.start_offset + INSTANCES_PER_CHUNK) as u32); // 3.
+                        }
+                    }
+                }
+            }
         }
 
         self.queue.submit(iter::once(encoder.finish()));
