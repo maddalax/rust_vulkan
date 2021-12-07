@@ -7,6 +7,9 @@ pub struct KeyMapListener {}
 
 impl InputObserver for KeyMapListener {
     fn on_input_change(&mut self, input: &KeyboardInput, state: &mut State) {
+        if input.virtual_keycode.is_none() {
+            return;
+        }
         let code = input.virtual_keycode.unwrap();
         let pressed = input.state == ElementState::Pressed;
         state.key_state.on_key_change(code, pressed);

@@ -1,5 +1,6 @@
 use std::{iter, mem};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::ops::{Index, IndexMut};
 use std::sync::{Arc, Mutex};
 
 use cgmath::{Point3, Quaternion, Vector3};
@@ -14,9 +15,10 @@ use winit::{
 };
 
 use crate::{camera, camera_controller, instance, structs};
-use crate::data::{INDICES, VERTICES};
+use crate::data::{CUBE, CUBE_INDICES, TRIANGLE, TRIANGLE_INDICES};
 use crate::event::{EngineChange, EngineEvent, EventSystem};
 use crate::instance::{Instance, InstanceRaw, MAX_INSTANCES};
+use crate::structs::Vertex;
 
 pub struct KeyState {
     state: HashSet<VirtualKeyCode>,
@@ -41,6 +43,31 @@ impl KeyState {
     }
 }
 
+
+pub struct InstanceHandler {
+    instances: HashMap<String, Vec<instance::Instance>>,
+    instance_lengths: Vec<usize>,
+}
+
+impl InstanceHandler {
+    fn new() -> InstanceHandler {
+        InstanceHandler {
+            instances: HashMap::new(),
+            instance_lengths: Vec::new(),
+        }
+    }
+
+    pub fn add(&mut self, instance: instance::Instance) {
+        let clone = instance.clone();
+        let instances = self.instances.get(&clone.instance_type);
+        if instances.is_none() {
+            self.instances.insert(instance.instance_type.clone(), vec![clone]);
+        } else {
+            self.instances.get_mut(&clone.instance_type.clone()).unwrap().push(clone);
+        }
+    }
+}
+
 pub struct State {
     surface: wgpu::Surface,
     device: wgpu::Device,
@@ -56,41 +83,13 @@ pub struct State {
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     pub(crate) camera_controller: camera_controller::CameraController,
-    pub(crate) instances: Vec<instance::Instance>,
+    pub(crate) instance_handler: InstanceHandler,
     pub(crate) instance_updates: VecDeque<usize>,
     instance_buffer: wgpu::Buffer,
     pub(crate) key_state: KeyState,
+    pub(crate) draw_cube: bool,
 }
 
-const ROTATION_SPEED: f32 = 2.0 * std::f32::consts::PI / 60.0;
-
-fn quat_mul(q: cgmath::Quaternion<f32>, r: cgmath::Quaternion<f32>) -> cgmath::Quaternion<f32> {
-    // This block uses quaternions of the form of
-
-    // q=q0+iq1+jq2+kq3
-
-    // and
-
-    // r=r0+ir1+jr2+kr3.
-
-    // The quaternion product has the form of
-
-    // t=q×r=t0+it1+jt2+kt3,
-
-    // where
-
-    // t0=(r0 q0 − r1 q1 − r2 q2 − r3 q3)
-    // t1=(r0 q1 + r1 q0 − r2 q3 + r3 q2)
-    // t2=(r0 q2 + r1 q3 + r2 q0 − r3 q1)
-    // t3=(r0 q3 − r1 q2 + r2 q1 + r3 q0
-
-    let w = r.s * q.s - r.v.x * q.v.x - r.v.y * q.v.y - r.v.z * q.v.z;
-    let xi = r.s * q.v.x + r.v.x * q.s - r.v.y * q.v.z + r.v.z * q.v.y;
-    let yj = r.s * q.v.y + r.v.x * q.v.z + r.v.y * q.s - r.v.z * q.v.x;
-    let zk = r.s * q.v.z - r.v.x * q.v.y + r.v.y * q.v.x + r.v.z * q.s;
-
-    cgmath::Quaternion::new(w, xi, yj, zk)
-}
 
 impl State {
     pub async fn new(window: &Window) -> Self {
@@ -204,17 +203,21 @@ impl State {
                 push_constant_ranges: &[],
             });
 
+        let vertex_data = vec![0; mem::size_of::<Vertex>() * MAX_INSTANCES];
+
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
+            contents: bytemuck::cast_slice(&vertex_data),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
         });
+
+        let index_data = vec![0; mem::size_of::<u16>() * MAX_INSTANCES];
 
         let index_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(INDICES),
-                usage: wgpu::BufferUsages::INDEX,
+                contents: bytemuck::cast_slice(&index_data),
+                usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
             }
         );
 
@@ -258,8 +261,8 @@ impl State {
             }),
         });
 
-        let num_vertices = VERTICES.len() as u32;
-        let num_indices = INDICES.len() as u32;
+        let num_vertices = CUBE.len() as u32;
+        let num_indices = TRIANGLE_INDICES.len() as u32;
 
         let camera_controller = camera_controller::CameraController::new(1.0);
 
@@ -277,6 +280,8 @@ impl State {
 
         let key_state = KeyState::new();
 
+        let instance_handler = InstanceHandler::new();
+
         Self {
             surface,
             device,
@@ -292,10 +297,11 @@ impl State {
             camera_bind_group,
             camera_buffer,
             camera_controller,
-            instances: Vec::new(),
             instance_buffer,
             instance_updates,
             key_state,
+            instance_handler,
+            draw_cube: true,
         }
     }
 
@@ -315,21 +321,21 @@ impl State {
     pub(crate) fn update(&mut self) {
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera.uniform]));
 
-        // for (i, instance) in self.instances.iter_mut().enumerate() {
-        //     let amount = cgmath::Quaternion::from_angle_y(cgmath::Rad(ROTATION_SPEED));
-        //     let current = instance.rotation;
-        //     instance.rotation = quat_mul(amount, current);
-        //     self.instance_updates.push_back(i);
+        self.queue.write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(CUBE));
+
+        self.queue.write_buffer(&self.vertex_buffer, (CUBE.len() * mem::size_of::<Vertex>()) as BufferAddress, bytemuck::cast_slice(TRIANGLE));
+
+        self.queue.write_buffer(&self.index_buffer, 0, bytemuck::cast_slice(CUBE_INDICES));
+        self.queue.write_buffer(&self.index_buffer, (CUBE_INDICES.len() * mem::size_of::<u16>()) as BufferAddress, bytemuck::cast_slice(TRIANGLE_INDICES));
+
+        // let mut update = self.instance_updates.pop_back();
+        //
+        // while !update.is_none() {
+        //     let index = update.unwrap();
+        //     let raw = self.instance_handler.instances[index].to_raw();
+        //     self.queue.write_buffer(&self.instance_buffer, (mem::size_of::<InstanceRaw>() * index) as BufferAddress, bytemuck::cast_slice(&[raw]));
+        //     update = self.instance_updates.pop_back();
         // }
-
-        let mut update = self.instance_updates.pop_back();
-
-        while !update.is_none() {
-            let index = update.unwrap();
-            let raw = self.instances[index].to_raw();
-            self.queue.write_buffer(&self.instance_buffer, (mem::size_of::<InstanceRaw>() * index) as BufferAddress, bytemuck::cast_slice(&[raw]));
-            update = self.instance_updates.pop_back();
-        }
     }
 
     pub(crate) fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -370,7 +376,18 @@ impl State {
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _); // 3.
+
+            let triangle_indices = TRIANGLE_INDICES.len() as u32;
+            let cube_indices = CUBE_INDICES.len() as u32;
+
+            // if self.draw_cube {
+            //     render_pass.draw_indexed(0..cube_indices, 0, 0..self.instances.len() as _); // 3.
+            // } else {
+            //     render_pass.draw_indexed(cube_indices..cube_indices + triangle_indices, (CUBE.len() as i32) - 1, 0..1); // 3.
+            // }
+
+            // render_pass.draw_indexed(0..cube_indices, 0, 0..self.instances.len() as _); // 3.
+            // render_pass.draw_indexed(cube_indices..cube_indices + triangle_indices, (CUBE.len() as i32) - 1, 10..11); // 3.
         }
 
         self.queue.submit(iter::once(encoder.finish()));

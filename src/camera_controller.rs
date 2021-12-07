@@ -27,8 +27,13 @@ impl CameraController {
     }
 
     pub fn process_events(&mut self, event: &KeyboardInput) -> bool {
+        if event.virtual_keycode.is_none() {
+            return false;
+        }
+
         let is_pressed = event.state == ElementState::Pressed;
         let keycode = event.virtual_keycode.unwrap();
+        
         match keycode {
             VirtualKeyCode::Space => {
                 self.is_up_pressed = is_pressed;

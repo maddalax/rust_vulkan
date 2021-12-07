@@ -28,6 +28,7 @@ mod state;
 mod structs;
 mod data;
 mod listeners;
+mod rotation;
 
 fn main() {
     env_logger::init();

@@ -1,4 +1,6 @@
+#[derive(Clone)]
 pub struct Instance {
+    pub(crate) instance_type: String,
     pub(crate) position: cgmath::Vector3<f32>,
     pub(crate) rotation: cgmath::Quaternion<f32>,
 }
