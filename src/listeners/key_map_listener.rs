@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use cgmath::{Quaternion, Rotation3, Vector3};
 use rand::Rng;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
@@ -21,28 +23,30 @@ impl InputObserver for KeyMapListener {
         let mut rng = rand::thread_rng();
 
         if code == VirtualKeyCode::Space {
-            for i in 0..100 {
+            for i in 0..500 {
                 state.instance_handler.add(Instance {
                     instance_type: InstanceType::Cube,
                     position: Vector3 {
-                        x: (rng.gen_range(0.0..100.0)),
-                        y: (rng.gen_range(0.0..100.0)),
-                        z: (rng.gen_range(0.0..100.0)),
+                        x: (rng.gen_range(0.0..500.0)),
+                        y: (rng.gen_range(0.0..500.0)),
+                        z: (rng.gen_range(0.0..500.0)),
                     },
                     rotation: Quaternion::from_angle_y(cgmath::Deg(2.0)),
                     start_offset: 0,
                     array_index: 0,
+                    max_allowed: 500000,
                 });
                 state.instance_handler.add(Instance {
                     instance_type: InstanceType::Triangle,
                     position: Vector3 {
-                        x: (rng.gen_range(0.0..100.0)),
-                        y: (rng.gen_range(0.0..100.0)),
-                        z: (rng.gen_range(0.0..100.0)),
+                        x: (rng.gen_range(0.0..500.0)),
+                        y: (rng.gen_range(0.0..500.0)),
+                        z: (rng.gen_range(0.0..500.0)),
                     },
                     rotation: Quaternion::from_angle_y(cgmath::Deg(2.0)),
                     start_offset: 0,
                     array_index: 0,
+                    max_allowed: 500000,
                 });
             }
         }

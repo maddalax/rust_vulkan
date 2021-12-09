@@ -2,6 +2,7 @@ use std::{iter, mem};
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 use std::ops::{Index, IndexMut};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use cgmath::{Point3, Quaternion, Vector3};
 use cgmath::prelude::*;
@@ -17,7 +18,7 @@ use winit::{
 use crate::{camera, camera_controller, instance, structs};
 use crate::data::{CUBE, CUBE_INDICES, TRIANGLE, TRIANGLE_INDICES};
 use crate::event::{EngineChange, EngineEvent, EventSystem};
-use crate::instance::{Instance, InstanceRaw, INSTANCES_PER_CHUNK, InstanceType, MAX_INSTANCES};
+use crate::instance::{Instance, InstanceRaw, InstanceType, MAX_INSTANCES};
 use crate::structs::Vertex;
 
 pub struct KeyState {
@@ -47,12 +48,15 @@ impl KeyState {
 pub struct InstanceHandler {
     pub(crate) instances: Vec<instance::Instance>,
     pub(crate) instance_changes: Vec<usize>,
+    pub(crate) max_allowed_sizes: HashMap<InstanceType, usize>,
+    pub(crate) max_index: usize,
+    pub(crate) total_added: usize,
 }
 
 impl InstanceHandler {
     fn new() -> InstanceHandler {
         let mut instances = Vec::with_capacity(MAX_INSTANCES);
-        for i in 0..instances.capacity() {
+        for _ in 0..instances.capacity() {
             instances.push(Instance {
                 instance_type: InstanceType::Empty,
                 position: Vector3 {
@@ -63,18 +67,35 @@ impl InstanceHandler {
                 rotation: Quaternion::from_angle_y(cgmath::Deg(2.0)),
                 start_offset: 0,
                 array_index: 0,
+                max_allowed: 0,
             });
         }
 
         InstanceHandler {
             instances,
             instance_changes: Vec::new(),
+            max_allowed_sizes: HashMap::new(),
+            max_index: 0,
+            total_added: 0,
         }
     }
 
+    pub fn get(&mut self, index: usize) -> &mut Instance {
+        return self.instances.get_mut(index).unwrap();
+    }
+
     pub fn add(&mut self, mut instance: instance::Instance) {
+        self.max_allowed_sizes.insert(instance.instance_type, instance.max_allowed);
+
         let offsets = self.find_offset(instance.instance_type.clone());
-        instance.array_index = offsets.0;
+
+        if offsets.0.is_none() {
+            println!("Could not find open slot for {}", instance.instance_type as u32);
+            return;
+        }
+
+        let array_index = offsets.0.unwrap();
+        instance.array_index = array_index;
         instance.start_offset = offsets.1;
 
         let mut o = instance.start_offset;
@@ -82,36 +103,63 @@ impl InstanceHandler {
             o = 1
         }
 
-        if instance.array_index > INSTANCES_PER_CHUNK * o {
+        if instance.array_index >= (instance.max_allowed + o) {
             return;
         }
 
         std::mem::replace(&mut self.instances[instance.array_index], instance);
-        self.instance_changes.push(offsets.0);
+        self.instance_changes.push(array_index);
+
+        if array_index > self.max_index {
+            self.max_index = array_index;
+        }
+
+        self.total_added += 1;
+
+        // println!("Add Took: {} Ms", now.elapsed().as_millis());
+        // println!("Total Entities: {}", self.total_added);
     }
 
-    fn find_offset(&self, instance_type: InstanceType) -> (usize, usize) {
-        if self.instances.len() == 0 {
-            return (0, 0);
-        }
-        let mut offset = 0;
+    pub fn update(&mut self, index: usize) {
+        self.instance_changes.push(index);
+    }
+
+    fn find_open_slot(&self, start_index: usize) -> Option<usize> {
+        let mut offset = start_index;
         loop {
-            if self.instances.len() < offset + 1 {
-                return (offset, offset);
+            if offset >= self.instances.len() {
+                return None;
             }
-            if self.instances[offset].instance_type as i32 == instance_type as i32 || self.instances[offset].instance_type == InstanceType::Empty {
-                let mut array_index = offset;
-                loop {
-                    let at_index = self.instances.get(array_index);
-                    if at_index.is_none() || at_index.unwrap().instance_type == InstanceType::Empty {
-                        return (array_index, offset);
-                    }
-                    array_index += 1;
-                }
+            let instance = self.instances.get(offset).unwrap();
+            if instance.instance_type == InstanceType::Empty {
+                return Option::Some(offset);
             }
-            offset += INSTANCES_PER_CHUNK;
+            offset += 1;
         }
     }
+
+    fn find_offset(&self, instance_type: InstanceType) -> (Option<usize>, usize) {
+        let mut offset = 0;
+        loop {
+            let instance = self.instances.get(offset).unwrap();
+
+            if instance.instance_type == InstanceType::Empty {
+                return (self.find_open_slot(offset), offset);
+            }
+
+            // Found a match of the same entity
+            if instance.instance_type == instance_type {
+                return (self.find_open_slot(offset), offset);
+            } else {
+                offset += instance.max_allowed;
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+struct RenderStats {
+    draw_calls: i32,
 }
 
 pub struct State {
@@ -134,6 +182,7 @@ pub struct State {
     instance_buffer: wgpu::Buffer,
     pub(crate) key_state: KeyState,
     pub(crate) draw_cube: bool,
+    render_stats: RenderStats,
 }
 
 
@@ -196,9 +245,9 @@ impl State {
             },
             up: cgmath::Vector3::unit_y(),
             aspect: config.width as f32 / config.height as f32,
-            fovy: 45.0,
+            fovy: 90.0,
             znear: 0.1,
-            zfar: 100.0,
+            zfar: 500.0,
             ..camera::Camera::default()
         };
 
@@ -348,6 +397,9 @@ impl State {
             key_state,
             instance_handler,
             draw_cube: true,
+            render_stats: RenderStats {
+                draw_calls: 0
+            },
         }
     }
 
@@ -377,15 +429,8 @@ impl State {
         while let Some(index) = self.instance_handler.instance_changes.pop() {
             let instance = self.instance_handler.instances.get(index).unwrap();
             let raw = instance.to_raw();
-            //             self.queue.write_buffer(&self.instance_buffer, (mem::size_of::<InstanceRaw>() * offset as usize) as BufferAddress, bytemuck::cast_slice(&[raw]));
             self.queue.write_buffer(&self.instance_buffer, (index * mem::size_of::<InstanceRaw>()) as BufferAddress, bytemuck::cast_slice(&[raw]));
         }
-
-        // while !update.is_none() {
-        //     let index = update.unwrap();
-        //     let raw = self.instance_handler.instances[index].to_raw();
-        //     update = self.instance_updates.pop_back();
-        // }
     }
 
     pub(crate) fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -429,35 +474,44 @@ impl State {
 
             let triangle_indices = TRIANGLE_INDICES.len() as u32;
             let cube_indices = CUBE_INDICES.len() as u32;
+            let mut offset = 0;
+            self.render_stats.draw_calls = 0;
 
-            // if self.draw_cube {
-            //     render_pass.draw_indexed(0..cube_indices, 0, 0..self.instances.len() as _); // 3.
-            // } else {
-            //     render_pass.draw_indexed(cube_indices..cube_indices + triangle_indices, (CUBE.len() as i32) - 1, 0..1); // 3.
-            // }
+            if self.instance_handler.instances.len() == 0 {
+                return Ok(());
+            }
 
-            for i in 0..MAX_INSTANCES {
-                if i % INSTANCES_PER_CHUNK == 0 {
-                    let instance = self.instance_handler.instances.get(i);
-                    if instance.is_some() {
-                        let unwrapped = instance.unwrap();
-
-                        if unwrapped.instance_type == InstanceType::Empty {
-                            break;
-                        }
-
-                        if unwrapped.instance_type == InstanceType::Cube {
-                            render_pass.draw_indexed(0..cube_indices, 0, unwrapped.start_offset as u32..(unwrapped.start_offset + INSTANCES_PER_CHUNK) as u32); // 3.
-                        } else {
-                            render_pass.draw_indexed(cube_indices..cube_indices + triangle_indices, (CUBE.len() as i32) - 1, unwrapped.start_offset as u32..(unwrapped.start_offset + INSTANCES_PER_CHUNK) as u32); // 3.
-                        }
-                    }
+            for _ in 0..self.instance_handler.max_index {
+                if offset > self.instance_handler.instances.len() - 1 {
+                    break;
                 }
+
+                let instance = self.instance_handler.instances.get(offset).unwrap();
+
+                if instance.instance_type == InstanceType::Empty {
+                    offset += 1;
+                    continue;
+                }
+
+                let max_instances = instance.max_allowed;
+
+                if instance.instance_type == InstanceType::Cube {
+                    self.render_stats.draw_calls += 1;
+                    render_pass.draw_indexed(0..cube_indices, 0, instance.start_offset as u32..(instance.start_offset + max_instances) as u32); // 3.
+                } else {
+                    render_pass.draw_indexed(cube_indices..cube_indices + triangle_indices, (CUBE.len() as i32) - 1, instance.start_offset as u32..(instance.start_offset
+                        + max_instances) as u32); // 3.
+                    self.render_stats.draw_calls += 1;
+                }
+
+                offset += instance.max_allowed;
             }
         }
 
         self.queue.submit(iter::once(encoder.finish()));
         output.present();
+
+        println!("Draw Calls: {}. Total Entities: {}", self.render_stats.draw_calls, self.instance_handler.total_added);
 
         Ok(())
     }

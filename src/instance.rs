@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum InstanceType {
     Empty,
     Cube,
@@ -13,10 +13,10 @@ pub struct Instance {
     pub(crate) rotation: cgmath::Quaternion<f32>,
     pub(crate) start_offset: usize,
     pub(crate) array_index: usize,
+    pub(crate) max_allowed: usize,
 }
 
 pub const MAX_INSTANCES: usize = 1000000;
-pub const INSTANCES_PER_CHUNK: usize = 10000;
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]

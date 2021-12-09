@@ -1,6 +1,7 @@
 use std::{iter, mem};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use cgmath::{Point3, Quaternion, Vector3};
 use cgmath::prelude::*;
