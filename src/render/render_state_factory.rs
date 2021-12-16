@@ -106,7 +106,6 @@ pub async fn create_render_state(window: &Window) -> RenderState {
     });
     let camera_controller = CameraController::new(1.0);
 
-    
     let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Render Pipeline Layout"),
         bind_group_layouts: &[&camera_bind_group_layout],

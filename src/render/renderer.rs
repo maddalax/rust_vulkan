@@ -1,7 +1,7 @@
-use std::iter;
 use crate::data::{CUBE, CUBE_INDICES, TRIANGLE_INDICES};
 use crate::render::instance::InstanceType;
 use crate::RenderState;
+use std::iter;
 
 pub fn on_render(state: &mut RenderState) -> Result<(), wgpu::SurfaceError> {
     let output = state.surface.get_current_texture()?;
@@ -70,15 +70,13 @@ pub fn on_render(state: &mut RenderState) -> Result<(), wgpu::SurfaceError> {
                 render_pass.draw_indexed(
                     0..cube_indices,
                     0,
-                    instance.start_offset as u32
-                        ..(instance.start_offset + max_instances) as u32,
+                    instance.start_offset as u32..(instance.start_offset + max_instances) as u32,
                 ); // 3.
             } else {
                 render_pass.draw_indexed(
                     cube_indices..cube_indices + triangle_indices,
                     (CUBE.len() as i32) - 1,
-                    instance.start_offset as u32
-                        ..(instance.start_offset + max_instances) as u32,
+                    instance.start_offset as u32..(instance.start_offset + max_instances) as u32,
                 ); // 3.
                 state.render_stats.draw_calls += 1;
             }

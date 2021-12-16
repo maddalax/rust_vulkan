@@ -1,17 +1,10 @@
-use cgmath::prelude::*;
-
-use std::{iter, mem};
-
-use wgpu::BufferAddress;
 use winit::event::*;
 
-use crate::data::{CUBE, CUBE_INDICES, TRIANGLE, TRIANGLE_INDICES};
 use crate::input::key_state::KeyState;
 use crate::render::camera::{camera, camera_controller};
 
-use crate::render::instance::{InstanceRaw, InstanceType};
 use crate::render::instance_handler::InstanceHandler;
-use crate::render::lib::{RenderStats, Vertex};
+use crate::render::lib::RenderStats;
 use crate::render::renderer::on_render;
 use crate::render::updater::on_update;
 
