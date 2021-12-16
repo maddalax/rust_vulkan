@@ -1,16 +1,15 @@
 use cgmath::prelude::*;
-use cgmath::{Point3, Quaternion, Vector3};
-use std::collections::{HashMap, HashSet, VecDeque};
+
 use std::{iter, mem};
-use wgpu::util::DeviceExt;
+
 use wgpu::BufferAddress;
-use winit::{event::*, window::Window};
+use winit::event::*;
 
 use crate::data::{CUBE, CUBE_INDICES, TRIANGLE, TRIANGLE_INDICES};
 use crate::input::key_state::KeyState;
 use crate::render::camera::{camera, camera_controller};
-use crate::render::instance;
-use crate::render::instance::{Instance, InstanceRaw, InstanceType, MAX_INSTANCES};
+
+use crate::render::instance::{InstanceRaw, InstanceType};
 use crate::render::instance_handler::InstanceHandler;
 use crate::render::lib::{RenderStats, Vertex};
 

@@ -1,10 +1,9 @@
 use cgmath::Point3;
-use std::collections::VecDeque;
+
 use std::mem;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
-use crate::data::{CUBE, TRIANGLE_INDICES};
 use crate::input::key_state::KeyState;
 use crate::render::camera::camera;
 use crate::render::camera::camera_controller::CameraController;
