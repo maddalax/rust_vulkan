@@ -1,27 +1,24 @@
 use std::sync::{Arc, Mutex};
 
 use winit::dpi::{PhysicalSize, Size};
-
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 
-use crate::event::{EventMatcher, EventSystem};
-use crate::instance::Instance;
-use crate::state::State;
+use render::instance::Instance;
 
-mod camera;
-mod camera_controller;
-mod constant;
+use crate::event::{EventMatcher, EventSystem};
+use crate::render::render_state::RenderState;
+use crate::render::render_state_factory::create_render_state;
+
 mod data;
 mod event;
-mod instance;
+mod input;
 mod listeners;
+mod render;
 mod rotation;
-mod state;
-mod structs;
 
 fn main() {
     env_logger::init();
@@ -45,7 +42,7 @@ fn main() {
     event_system.add_update_observer(camera_listener);
 
     // State::new uses async code, so we're going to wait for it to finish
-    let mut state: State = pollster::block_on(State::new(&window));
+    let mut state: RenderState = pollster::block_on(create_render_state(&window));
 
     event_loop.run(move |event, _, control_flow| {
         let id = window.id();

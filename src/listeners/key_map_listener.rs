@@ -3,14 +3,13 @@ use rand::Rng;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::event::InputObserver;
-use crate::instance::InstanceType;
-use crate::state::State;
-use crate::Instance;
+use crate::render::instance::InstanceType;
+use crate::{Instance, RenderState};
 
 pub struct KeyMapListener {}
 
 impl InputObserver for KeyMapListener {
-    fn on_input_change(&mut self, input: &KeyboardInput, state: &mut State) {
+    fn on_input_change(&mut self, input: &KeyboardInput, state: &mut RenderState) {
         if input.virtual_keycode.is_none() {
             return;
         }

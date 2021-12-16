@@ -1,3 +1,4 @@
+use crate::render::camera::camera::Camera;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 pub struct CameraController {
@@ -60,7 +61,7 @@ impl CameraController {
         }
     }
 
-    pub fn update_camera(&self, camera: &mut crate::camera::Camera) {
+    pub fn update_camera(&self, camera: &mut Camera) {
         use cgmath::InnerSpace;
         let forward = camera.target - camera.eye;
         let forward_norm = forward.normalize();

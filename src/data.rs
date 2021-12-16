@@ -1,4 +1,4 @@
-use crate::structs::Vertex;
+use crate::render::lib::Vertex;
 
 pub const CUBE: &[Vertex] = &[
     Vertex {
