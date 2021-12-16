@@ -57,6 +57,7 @@ pub async fn create_render_state(window: &Window) -> RenderState {
         source: wgpu::ShaderSource::Wgsl(include_str!("./shaders/shader.wgsl").into()),
     });
 
+    /* Create Camera */
     let mut camera = camera::Camera {
         eye: Point3 {
             x: (25.0),
@@ -75,15 +76,12 @@ pub async fn create_render_state(window: &Window) -> RenderState {
         zfar: 500.0,
         ..camera::Camera::default()
     };
-
     camera.update();
-
     let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Camera Buffer"),
         contents: bytemuck::cast_slice(&[camera.uniform]),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
     });
-
     let camera_bind_group_layout =
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[wgpu::BindGroupLayoutEntry {
@@ -98,7 +96,6 @@ pub async fn create_render_state(window: &Window) -> RenderState {
             }],
             label: Some("camera_bind_group_layout"),
         });
-
     let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         layout: &camera_bind_group_layout,
         entries: &[wgpu::BindGroupEntry {
@@ -107,7 +104,9 @@ pub async fn create_render_state(window: &Window) -> RenderState {
         }],
         label: Some("camera_bind_group"),
     });
+    let camera_controller = CameraController::new(1.0);
 
+    
     let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Render Pipeline Layout"),
         bind_group_layouts: &[&camera_bind_group_layout],
@@ -168,8 +167,6 @@ pub async fn create_render_state(window: &Window) -> RenderState {
             }],
         }),
     });
-
-    let camera_controller = CameraController::new(1.0);
 
     let instance_data = vec![0; mem::size_of::<InstanceRaw>() * MAX_INSTANCES];
 
