@@ -1,13 +1,11 @@
-
-
 use cgmath::{Quaternion, Rotation3, Vector3};
 use rand::Rng;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::event::InputObserver;
-use crate::Instance;
 use crate::instance::InstanceType;
 use crate::state::State;
+use crate::Instance;
 
 pub struct KeyMapListener {}
 

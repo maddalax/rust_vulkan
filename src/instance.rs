@@ -1,5 +1,3 @@
-
-
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum InstanceType {
     Empty,
@@ -27,7 +25,9 @@ pub struct InstanceRaw {
 impl Instance {
     pub(crate) fn to_raw(&self) -> InstanceRaw {
         InstanceRaw {
-            model: (cgmath::Matrix4::from_translation(self.position) * cgmath::Matrix4::from(self.rotation)).into(),
+            model: (cgmath::Matrix4::from_translation(self.position)
+                * cgmath::Matrix4::from(self.rotation))
+            .into(),
         }
     }
 }

@@ -1,8 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use winit::{
-    event::*,
-};
+use winit::event::*;
 use winit::window::WindowId;
 
 use crate::State;
@@ -23,15 +21,17 @@ pub struct EventSystem {
 pub struct EventMatcher {}
 
 impl EventMatcher {
-    pub fn on_event(event_window_id: &WindowId, event: &Event<()>, event_system: &EventSystem, state: &mut State) {
+    pub fn on_event(
+        event_window_id: &WindowId,
+        event: &Event<()>,
+        event_system: &EventSystem,
+        state: &mut State,
+    ) {
         match event {
             Event::RedrawRequested(_) => {
                 event_system.notify_update(state);
             }
-            Event::WindowEvent {
-                window_id,
-                event,
-            } if event_window_id == window_id => {
+            Event::WindowEvent { window_id, event } if event_window_id == window_id => {
                 match event {
                     WindowEvent::KeyboardInput { input, .. } => {
                         event_system.notify_keyboard_input(input, state);

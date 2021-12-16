@@ -1,23 +1,15 @@
-
 use std::sync::{Arc, Mutex};
-
-
-
-
-
-
-
 
 use winit::dpi::{PhysicalSize, Size};
 
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
-    window::{WindowBuilder},
+    window::WindowBuilder,
 };
 
 use crate::event::{EventMatcher, EventSystem};
-use crate::instance::{Instance};
+use crate::instance::Instance;
 use crate::state::State;
 
 mod camera;

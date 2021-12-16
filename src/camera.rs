@@ -1,7 +1,5 @@
 use cgmath::{Deg, Point3, SquareMatrix, Vector3};
 
-
-
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform {
@@ -24,11 +22,16 @@ impl Camera {
     fn build_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
-        crate::constant::OPENGL_TO_WGPU_MATRIX * proj * view * cgmath::Matrix4::from_angle_z(self.model_rotation)
+        crate::constant::OPENGL_TO_WGPU_MATRIX
+            * proj
+            * view
+            * cgmath::Matrix4::from_angle_z(self.model_rotation)
     }
 
     pub fn update(&mut self) {
-        self.uniform.view_proj = (self.build_projection_matrix() * cgmath::Matrix4::from_angle_z(self.model_rotation)).into()
+        self.uniform.view_proj = (self.build_projection_matrix()
+            * cgmath::Matrix4::from_angle_z(self.model_rotation))
+        .into()
     }
 }
 
@@ -56,7 +59,7 @@ impl Default for Camera {
             zfar: 0.0,
             model_rotation: Deg(0.0),
             uniform: CameraUniform {
-                view_proj: cgmath::Matrix4::identity().into()
+                view_proj: cgmath::Matrix4::identity().into(),
             },
         }
     }

@@ -1,12 +1,7 @@
-
-
-
-
 use winit::event::{KeyboardInput, VirtualKeyCode};
 
-use crate::{State};
 use crate::event::{InputObserver, UpdateObserver};
-
+use crate::State;
 
 pub struct TestListener {}
 

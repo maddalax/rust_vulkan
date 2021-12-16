@@ -1,21 +1,15 @@
-use std::{iter, mem};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::{iter, mem};
 
-
-
-
-use cgmath::{Point3, Quaternion, Vector3};
 use cgmath::prelude::*;
+use cgmath::{Point3, Quaternion, Vector3};
 
-use wgpu::BufferAddress;
 use wgpu::util::DeviceExt;
-use winit::{
-    event::*,
-    window::{Window},
-};
+use wgpu::BufferAddress;
+use winit::{event::*, window::Window};
 
-use crate::{camera, camera_controller, instance};
 use crate::data::{CUBE, CUBE_INDICES, TRIANGLE, TRIANGLE_INDICES};
+use crate::{camera, camera_controller, instance};
 
 use crate::instance::{Instance, InstanceRaw, InstanceType, MAX_INSTANCES};
 use crate::structs::Vertex;
@@ -27,7 +21,7 @@ pub struct KeyState {
 impl KeyState {
     fn new() -> Self {
         KeyState {
-            state: HashSet::new()
+            state: HashSet::new(),
         }
     }
 
@@ -42,7 +36,6 @@ impl KeyState {
         }
     }
 }
-
 
 pub struct InstanceHandler {
     pub(crate) instances: Vec<instance::Instance>,
@@ -84,12 +77,16 @@ impl InstanceHandler {
     }
 
     pub fn add(&mut self, mut instance: instance::Instance) {
-        self.max_allowed_sizes.insert(instance.instance_type, instance.max_allowed);
+        self.max_allowed_sizes
+            .insert(instance.instance_type, instance.max_allowed);
 
         let offsets = self.find_offset(instance.instance_type);
 
         if offsets.0.is_none() {
-            println!("Could not find open slot for {}", instance.instance_type as u32);
+            println!(
+                "Could not find open slot for {}",
+                instance.instance_type as u32
+            );
             return;
         }
 
@@ -184,7 +181,6 @@ pub struct State {
     render_stats: RenderStats,
 }
 
-
 impl State {
     pub async fn new(window: &Window) -> Self {
         let size = window.inner_size();
@@ -252,17 +248,15 @@ impl State {
 
         camera.update();
 
-        let camera_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Camera Buffer"),
-                contents: bytemuck::cast_slice(&[camera.uniform]),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            }
-        );
+        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera.uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
 
-        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStages::VERTEX,
                     ty: wgpu::BindingType::Buffer {
@@ -271,29 +265,23 @@ impl State {
                         min_binding_size: None,
                     },
                     count: None,
-                }
-            ],
-            label: Some("camera_bind_group_layout"),
-        });
+                }],
+                label: Some("camera_bind_group_layout"),
+            });
 
         let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &camera_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: camera_buffer.as_entire_binding(),
-                }
-            ],
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            }],
             label: Some("camera_bind_group"),
         });
-
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[
-                    &camera_bind_group_layout
-                ],
+                bind_group_layouts: &[&camera_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -307,13 +295,11 @@ impl State {
 
         let index_data = vec![0; mem::size_of::<u16>() * MAX_INSTANCES];
 
-        let index_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(&index_data),
-                usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
-            }
-        );
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(&index_data),
+            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+        });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
@@ -323,7 +309,7 @@ impl State {
                 entry_point: "vs_main", // 1.
                 buffers: &[
                     crate::structs::Vertex::desc(),
-                    instance::InstanceRaw::desc()
+                    instance::InstanceRaw::desc(),
                 ], // 2.
             },
             primitive: wgpu::PrimitiveState {
@@ -340,14 +326,16 @@ impl State {
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState {
-                count: 1, // 2.
-                mask: !0, // 3.
+                count: 1,                         // 2.
+                mask: !0,                         // 3.
                 alpha_to_coverage_enabled: false, // 4.
             },
-            fragment: Some(wgpu::FragmentState { // 3.
+            fragment: Some(wgpu::FragmentState {
+                // 3.
                 module: &shader,
                 entry_point: "fs_main",
-                targets: &[wgpu::ColorTargetState { // 4.
+                targets: &[wgpu::ColorTargetState {
+                    // 4.
                     format: config.format,
                     blend: Some(wgpu::BlendState::REPLACE),
                     write_mask: wgpu::ColorWrites::ALL,
@@ -362,13 +350,11 @@ impl State {
 
         let instance_data = vec![0; mem::size_of::<InstanceRaw>() * MAX_INSTANCES];
 
-        let instance_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Instance Buffer"),
-                contents: bytemuck::cast_slice(&instance_data),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            }
-        );
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&instance_data),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        });
 
         let instance_updates = VecDeque::new();
 
@@ -396,9 +382,7 @@ impl State {
             key_state,
             instance_handler,
             draw_cube: true,
-            render_stats: RenderStats {
-                draw_calls: 0
-            },
+            render_stats: RenderStats { draw_calls: 0 },
         }
     }
 
@@ -416,19 +400,37 @@ impl State {
     }
 
     pub(crate) fn update(&mut self) {
-        self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera.uniform]));
+        self.queue.write_buffer(
+            &self.camera_buffer,
+            0,
+            bytemuck::cast_slice(&[self.camera.uniform]),
+        );
 
-        self.queue.write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(CUBE));
+        self.queue
+            .write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(CUBE));
 
-        self.queue.write_buffer(&self.vertex_buffer, (CUBE.len() * mem::size_of::<Vertex>()) as BufferAddress, bytemuck::cast_slice(TRIANGLE));
+        self.queue.write_buffer(
+            &self.vertex_buffer,
+            (CUBE.len() * mem::size_of::<Vertex>()) as BufferAddress,
+            bytemuck::cast_slice(TRIANGLE),
+        );
 
-        self.queue.write_buffer(&self.index_buffer, 0, bytemuck::cast_slice(CUBE_INDICES));
-        self.queue.write_buffer(&self.index_buffer, (CUBE_INDICES.len() * mem::size_of::<u16>()) as BufferAddress, bytemuck::cast_slice(TRIANGLE_INDICES));
+        self.queue
+            .write_buffer(&self.index_buffer, 0, bytemuck::cast_slice(CUBE_INDICES));
+        self.queue.write_buffer(
+            &self.index_buffer,
+            (CUBE_INDICES.len() * mem::size_of::<u16>()) as BufferAddress,
+            bytemuck::cast_slice(TRIANGLE_INDICES),
+        );
 
         while let Some(index) = self.instance_handler.instance_changes.pop() {
             let instance = self.instance_handler.instances.get(index).unwrap();
             let raw = instance.to_raw();
-            self.queue.write_buffer(&self.instance_buffer, (index * mem::size_of::<InstanceRaw>()) as BufferAddress, bytemuck::cast_slice(&[raw]));
+            self.queue.write_buffer(
+                &self.instance_buffer,
+                (index * mem::size_of::<InstanceRaw>()) as BufferAddress,
+                bytemuck::cast_slice(&[raw]),
+            );
         }
     }
 
@@ -496,10 +498,19 @@ impl State {
 
                 if instance.instance_type == InstanceType::Cube {
                     self.render_stats.draw_calls += 1;
-                    render_pass.draw_indexed(0..cube_indices, 0, instance.start_offset as u32..(instance.start_offset + max_instances) as u32); // 3.
+                    render_pass.draw_indexed(
+                        0..cube_indices,
+                        0,
+                        instance.start_offset as u32
+                            ..(instance.start_offset + max_instances) as u32,
+                    ); // 3.
                 } else {
-                    render_pass.draw_indexed(cube_indices..cube_indices + triangle_indices, (CUBE.len() as i32) - 1, instance.start_offset as u32..(instance.start_offset
-                        + max_instances) as u32); // 3.
+                    render_pass.draw_indexed(
+                        cube_indices..cube_indices + triangle_indices,
+                        (CUBE.len() as i32) - 1,
+                        instance.start_offset as u32
+                            ..(instance.start_offset + max_instances) as u32,
+                    ); // 3.
                     self.render_stats.draw_calls += 1;
                 }
 
@@ -510,7 +521,10 @@ impl State {
         self.queue.submit(iter::once(encoder.finish()));
         output.present();
 
-        println!("Draw Calls: {}. Total Entities: {}", self.render_stats.draw_calls, self.instance_handler.total_added);
+        println!(
+            "Draw Calls: {}. Total Entities: {}",
+            self.render_stats.draw_calls, self.instance_handler.total_added
+        );
 
         Ok(())
     }

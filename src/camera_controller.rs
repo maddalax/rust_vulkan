@@ -1,8 +1,5 @@
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
-
-
-
 pub struct CameraController {
     speed: f32,
     is_up_pressed: bool,
@@ -33,7 +30,7 @@ impl CameraController {
 
         let is_pressed = event.state == ElementState::Pressed;
         let keycode = event.virtual_keycode.unwrap();
-        
+
         match keycode {
             VirtualKeyCode::Space => {
                 self.is_up_pressed = is_pressed;
