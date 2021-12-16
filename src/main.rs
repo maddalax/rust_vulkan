@@ -1,35 +1,35 @@
-use std::{iter, mem};
-use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
-use std::time::Instant;
 
-use cgmath::{Point3, Quaternion, Vector3};
-use cgmath::prelude::*;
-use rand::Rng;
-use wgpu::BufferAddress;
-use wgpu::util::DeviceExt;
+use std::sync::{Arc, Mutex};
+
+
+
+
+
+
+
+
+use winit::dpi::{PhysicalSize, Size};
+
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder},
+    window::{WindowBuilder},
 };
-use winit::dpi::{PhysicalSize, Size};
-use winit::window::Fullscreen;
 
 use crate::event::{EventMatcher, EventSystem};
-use crate::instance::{Instance, InstanceRaw, MAX_INSTANCES};
+use crate::instance::{Instance};
 use crate::state::State;
 
 mod camera;
 mod camera_controller;
 mod constant;
-mod instance;
-mod event;
-mod state;
-mod structs;
 mod data;
+mod event;
+mod instance;
 mod listeners;
 mod rotation;
+mod state;
+mod structs;
 
 fn main() {
     env_logger::init();
@@ -41,7 +41,9 @@ fn main() {
     let mut event_system = EventSystem::new();
 
     let test_listener = Arc::new(Mutex::new(listeners::test_listener::TestListener {}));
-    let camera_key_listener = Arc::new(Mutex::new(listeners::camera_keyboard_listener::CameraKeyListener {}));
+    let camera_key_listener = Arc::new(Mutex::new(
+        listeners::camera_keyboard_listener::CameraKeyListener {},
+    ));
     let key_map_listener = Arc::new(Mutex::new(listeners::key_map_listener::KeyMapListener {}));
     let camera_listener = Arc::new(Mutex::new(listeners::camera_listener::CameraListener {}));
 
@@ -68,11 +70,11 @@ fn main() {
                         WindowEvent::CloseRequested
                         | WindowEvent::KeyboardInput {
                             input:
-                            KeyboardInput {
-                                state: ElementState::Pressed,
-                                virtual_keycode: Some(VirtualKeyCode::Escape),
-                                ..
-                            },
+                                KeyboardInput {
+                                    state: ElementState::Pressed,
+                                    virtual_keycode: Some(VirtualKeyCode::Escape),
+                                    ..
+                                },
                             ..
                         } => *control_flow = ControlFlow::Exit,
                         WindowEvent::Resized(physical_size) => {

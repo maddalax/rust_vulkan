@@ -2,8 +2,6 @@ use std::sync::{Arc, Mutex};
 
 use winit::{
     event::*,
-    event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder},
 };
 use winit::window::WindowId;
 
@@ -64,7 +62,7 @@ impl EventSystem {
     pub fn notify_keyboard_input(&self, input: &KeyboardInput, state: &mut State) {
         for observer in self.input_observers.clone() {
             let mut observer = observer.lock().unwrap();
-            observer.on_input_change(&input, state);
+            observer.on_input_change(input, state);
         }
     }
 

@@ -1,6 +1,6 @@
-use cgmath::{Vector3, Zero};
 
-use crate::Instance;
+
+
 use crate::structs::Vertex;
 
 pub const CUBE: &[Vertex] = &[

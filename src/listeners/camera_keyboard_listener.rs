@@ -1,6 +1,6 @@
 use winit::event::KeyboardInput;
 
-use crate::event::{EngineChange, InputObserver, UpdateObserver};
+use crate::event::{InputObserver, UpdateObserver};
 use crate::State;
 
 pub struct CameraKeyListener {}
@@ -12,5 +12,5 @@ impl InputObserver for CameraKeyListener {
 }
 
 impl UpdateObserver for CameraKeyListener {
-    fn on_update(&mut self, state: &mut State) {}
+    fn on_update(&mut self, _state: &mut State) {}
 }

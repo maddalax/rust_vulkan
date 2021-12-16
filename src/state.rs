@@ -1,23 +1,22 @@
 use std::{iter, mem};
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
-use std::ops::{Index, IndexMut};
-use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::collections::{HashMap, HashSet, VecDeque};
+
+
+
 
 use cgmath::{Point3, Quaternion, Vector3};
 use cgmath::prelude::*;
-use rand::Rng;
+
 use wgpu::BufferAddress;
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
-    event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder},
+    window::{Window},
 };
 
-use crate::{camera, camera_controller, instance, structs};
+use crate::{camera, camera_controller, instance};
 use crate::data::{CUBE, CUBE_INDICES, TRIANGLE, TRIANGLE_INDICES};
-use crate::event::{EngineChange, EngineEvent, EventSystem};
+
 use crate::instance::{Instance, InstanceRaw, InstanceType, MAX_INSTANCES};
 use crate::structs::Vertex;
 
@@ -87,7 +86,7 @@ impl InstanceHandler {
     pub fn add(&mut self, mut instance: instance::Instance) {
         self.max_allowed_sizes.insert(instance.instance_type, instance.max_allowed);
 
-        let offsets = self.find_offset(instance.instance_type.clone());
+        let offsets = self.find_offset(instance.instance_type);
 
         if offsets.0.is_none() {
             println!("Could not find open slot for {}", instance.instance_type as u32);
@@ -371,7 +370,7 @@ impl State {
             }
         );
 
-        let mut instance_updates = VecDeque::new();
+        let instance_updates = VecDeque::new();
 
         let key_state = KeyState::new();
 
@@ -412,7 +411,7 @@ impl State {
         }
     }
 
-    pub(crate) fn input(&mut self, event: &WindowEvent) -> bool {
+    pub(crate) fn input(&mut self, _event: &WindowEvent) -> bool {
         false
     }
 
@@ -477,7 +476,7 @@ impl State {
             let mut offset = 0;
             self.render_stats.draw_calls = 0;
 
-            if self.instance_handler.instances.len() == 0 {
+            if self.instance_handler.instances.is_empty() {
                 return Ok(());
             }
 

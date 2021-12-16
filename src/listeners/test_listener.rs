@@ -1,17 +1,17 @@
-use std::ops::Mul;
 
-use cgmath::{Quaternion, Rotation3, Vector3, Zero};
-use rand::Rng;
-use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
-use crate::{Instance, MAX_INSTANCES, State};
-use crate::event::{EngineChange, InputObserver, UpdateObserver};
-use crate::instance::InstanceType;
+
+
+use winit::event::{KeyboardInput, VirtualKeyCode};
+
+use crate::{State};
+use crate::event::{InputObserver, UpdateObserver};
+
 
 pub struct TestListener {}
 
 impl InputObserver for TestListener {
-    fn on_input_change(&mut self, input: &KeyboardInput, state: &mut State) {}
+    fn on_input_change(&mut self, _input: &KeyboardInput, _state: &mut State) {}
 }
 
 impl UpdateObserver for TestListener {

@@ -1,6 +1,6 @@
 use cgmath::{Deg, Point3, SquareMatrix, Vector3};
 
-use crate::constant::OPENGL_TO_WGPU_MATRIX;
+
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -24,7 +24,7 @@ impl Camera {
     fn build_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
-        return crate::constant::OPENGL_TO_WGPU_MATRIX * proj * view * cgmath::Matrix4::from_angle_z(self.model_rotation);
+        crate::constant::OPENGL_TO_WGPU_MATRIX * proj * view * cgmath::Matrix4::from_angle_z(self.model_rotation)
     }
 
     pub fn update(&mut self) {

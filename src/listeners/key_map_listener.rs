@@ -1,4 +1,4 @@
-use std::borrow::Borrow;
+
 
 use cgmath::{Quaternion, Rotation3, Vector3};
 use rand::Rng;
@@ -23,7 +23,7 @@ impl InputObserver for KeyMapListener {
         let mut rng = rand::thread_rng();
 
         if code == VirtualKeyCode::Space {
-            for i in 0..500 {
+            for _i in 0..500 {
                 state.instance_handler.add(Instance {
                     instance_type: InstanceType::Cube,
                     position: Vector3 {
